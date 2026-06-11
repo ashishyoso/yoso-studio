@@ -86,9 +86,12 @@ export interface Span {
   text: string;
   tone: Tone;
 }
+export type BodyStyle = 'body' | 'hand';
 export interface BodyLine {
-  text: string;
-  highlight: 'none' | 'topic' | 'alarm';
+  /** 'body' = normal body sans; 'hand' = Playwrite handwritten accent line. */
+  style: BodyStyle;
+  /** Inline two-tone runs so only the stat/keyword is colored, not the line. */
+  spans: Span[];
 }
 
 export type SlideLayout = 'cover' | 'section' | 'check-do' | 'save';

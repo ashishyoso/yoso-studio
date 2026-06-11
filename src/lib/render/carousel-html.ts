@@ -17,9 +17,12 @@ export type AssetMap = Record<string, AssetMeta>;
 
 const TOKENS = {
   bg: '#F1E8DE',
-  card: '#F7EFE4',
-  terracotta: '#D14124',
-  alarm: '#D14124',
+  card: '#FBF5EB',
+  terracotta: '#D14124', // topic noun
+  // Real decks use a distinctly BRIGHTER red for the single worst-outcome phrase
+  // (e.g. "less time in deep sleep") — the design-bible token said #D14124, but
+  // the actual carousels prove alarm ≠ terracotta. Matched to artwork.
+  alarm: '#EF3E2A',
   ink: '#1A1A1A',
   white: '#FFFFFF',
   shadow: '0 12px 40px rgba(208,64,36,0.12)',
@@ -58,7 +61,8 @@ function headlineSize(spans: Span[], base: number, floor: number): number {
 }
 
 function logoPill(): string {
-  return `<div class="logo">FIFTY<span class="plus">+</span></div>`;
+  // Thin medical-cross glyph (not a literal "+"), centered with the wordmark.
+  return `<div class="logo">FIFTY<svg class="plus" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.4" y="2.5" width="3.2" height="19" rx="1.6"/><rect x="2.5" y="10.4" width="19" height="3.2" rx="1.6"/></svg></div>`;
 }
 
 function navPill(right = false): string {
@@ -103,7 +107,7 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
   switch (slide.layout) {
     case 'cover': {
       const spans = slide.headline || [];
-      const size = headlineSize(spans, 104, 66);
+      const size = headlineSize(spans, 112, 72);
       return `
         ${logoPill()}
         <h1 class="h-cover" style="font-size:${size}px">${renderSpans(spans)}</h1>
@@ -113,10 +117,11 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
     }
     case 'section': {
       const body = (slide.body || [])
-        .map((l) => {
-          const cls = l.highlight === 'topic' ? ' class="t"' : l.highlight === 'alarm' ? ' class="r"' : '';
-          return `<span${cls}>${esc(l.text)}</span>`;
-        })
+        .map((l) =>
+          l.style === 'hand'
+            ? `<span class="hand">${esc((l.spans || []).map((s) => s.text).join(''))}</span>`
+            : renderSpans(l.spans || []),
+        )
         .join('<br><br>');
       // Keep text out of the image: narrow the text column when the image sits
       // on the right; leave headroom above a bottom-bleeding image.
@@ -132,7 +137,7 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
           ${body ? `<p class="body">${body}</p>` : ''}
         </div>
         ${heroImage(slide, assets, element)}
-        ${slide.navPill ? navPill() : ''}`;
+        ${slide.navPill ? navPill(hasImg) : ''}`;
     }
     case 'check-do': {
       const list = (items: string[] | null) =>
@@ -152,12 +157,12 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
     }
     case 'save': {
       const spans = slide.headline || [];
-      const size = headlineSize(spans, 88, 60);
+      const size = headlineSize(spans, 96, 62);
       const kw = slide.commentKeyword ? esc(slide.commentKeyword) : 'SAVE';
       return `
         ${logoPill()}
         <h1 class="h-cover" style="font-size:${size}px">${renderSpans(spans)}</h1>
-        <p class="body" style="margin-top:28px"><span class="t" style="font-weight:600">Comment ${kw}</span> below.</p>
+        <p class="body" style="margin-top:28px">Comment <span class="t" style="font-weight:600">${kw}</span> below.</p>
         ${slide.offer ? `<p class="body">${esc(slide.offer)}</p>` : ''}
         <span class="save-btn">Save This Post</span>
         ${heroImage(slide, assets, element)}`;
@@ -185,10 +190,10 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
   html,body{margin:0;padding:0}
   .slide{width:1080px;height:1350px;background:var(--bg);position:relative;
     padding:var(--margin);overflow:hidden;font-family:var(--font-body);color:var(--ink)}
-  .logo{display:inline-flex;align-items:baseline;gap:2px;background:var(--terracotta);
+  .logo{display:inline-flex;align-items:center;gap:1px;background:var(--terracotta);
     color:#fff;font-family:var(--font-display);font-weight:800;font-size:30px;
-    padding:11px 26px;border-radius:999px;letter-spacing:.5px}
-  .logo .plus{font-size:20px;position:relative;top:-8px;font-weight:700}
+    padding:11px 24px;border-radius:999px;letter-spacing:.5px}
+  .logo .plus{width:26px;height:26px;fill:#fff;margin-right:-3px}
   .col{position:relative;z-index:2}
   .h-cover{font-family:var(--font-display);line-height:1.02;font-weight:400;margin:26px 0}
   .h-section{font-family:var(--font-serif);font-size:80px;line-height:1.05;color:var(--terracotta);font-weight:500}
@@ -207,6 +212,7 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
     border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:34px;color:#1a1a1a}
   .save-btn{display:inline-block;background:var(--terracotta);color:#fff;font-style:italic;
     font-size:34px;padding:14px 24px;border-radius:4px;margin-top:26px}
+  .hand{font-family:var(--font-hand);color:var(--terracotta);font-size:31px;line-height:1.3}
   .hero{position:absolute;overflow:hidden}
   .hero.placeholder{background:linear-gradient(135deg,rgba(209,65,36,.92),rgba(209,65,36,.62));
     color:#fff;display:flex;flex-direction:column;justify-content:flex-end;padding:26px}

@@ -47,10 +47,18 @@ const BODY_LINE = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    text: { type: 'string' },
-    highlight: { type: 'string', enum: ['none', 'topic', 'alarm'] },
+    style: {
+      type: 'string',
+      enum: ['body', 'hand'],
+      description: "'body' = normal body line; 'hand' = an occasional handwritten-accent transitional/closing line (use sparingly, like 'More milk hasn't solved it.').",
+    },
+    spans: {
+      type: 'array',
+      items: SPAN,
+      description: 'Inline runs for this line. Color ONLY the stat/keyword (tone "topic"), leave the rest "ink". Put each idea on its own line.',
+    },
   },
-  required: ['text', 'highlight'],
+  required: ['style', 'spans'],
 } as const;
 
 const SLIDE_IMAGE = {
