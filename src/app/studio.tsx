@@ -26,8 +26,9 @@ export default function Studio({
   const [assetMap, setAssetMap] = useState<AssetMap>({});
   const [elementMap, setElementMap] = useState<Record<number, string>>({});
 
-  const [loading, setLoading] = useState<null | 'strategy' | 'plan' | 'elements' | 'render'>(null);
+  const [loading, setLoading] = useState<null | 'strategy' | 'plan' | 'elements' | 'render' | 'upload'>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
   const [imgNotice, setImgNotice] = useState<string | null>(null);
 
@@ -81,6 +82,27 @@ export default function Studio({
       setAssetMap(json.assetMap || {});
       setElementMap({});
       setImgNotice(null);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function onUpload(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setUploadNote(null);
+    setLoading('upload');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/extract', { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Extraction failed.');
+      setContent(json.text);
+      setFaithful(true); // an uploaded script is finished copy → faithful layout
+      setUploadNote(`Loaded ${json.filename} (${json.chars.toLocaleString()} chars). Review below, then "Lay out my copy".`);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -212,6 +234,19 @@ export default function Studio({
               ))}
             </select>
           </div>
+        </div>
+        <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <label htmlFor="file" className="btn secondary" style={{ cursor: 'pointer', margin: 0 }}>
+            {loading === 'upload' ? <><span className="spinner" /> Extracting…</> : '⬆ Upload script (PDF / TXT / MD)'}
+          </label>
+          <input
+            id="file"
+            type="file"
+            accept=".pdf,.txt,.md,application/pdf,text/plain"
+            style={{ display: 'none' }}
+            onChange={(e) => onUpload(e.target.files?.[0])}
+          />
+          {uploadNote && <span className="sub">{uploadNote}</span>}
         </div>
         <div style={{ marginTop: 14 }}>
           <label>Content / copy (raw idea, OR a finished slide-by-slide script)</label>
