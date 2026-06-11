@@ -29,7 +29,7 @@ export default function Studio({
   const [assetMap, setAssetMap] = useState<AssetMap>({});
   const [elementMap, setElementMap] = useState<Record<number, string>>({});
   const [provider, setProvider] = useState<ImageProvider>(providers['nano-banana'] ? 'nano-banana' : providers.openai ? 'openai' : 'nano-banana');
-  const [renderMode, setRenderMode] = useState<'template' | 'full-image'>('template');
+  const [renderMode, setRenderMode] = useState<'template' | 'full-image'>('full-image');
   const [fullSlides, setFullSlides] = useState<{ index: number; pngBase64: string }[] | null>(null);
   const [fullNote, setFullNote] = useState<string | null>(null);
 

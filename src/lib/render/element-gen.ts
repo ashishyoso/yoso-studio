@@ -38,14 +38,17 @@ export function providerEnvVar(provider: ImageProvider): string {
 // in-process cache so identical (provider,prompt) pairs aren't paid for twice.
 const cache = new Map<string, string>();
 
-async function callGemini(text: string): Promise<string> {
+export interface RefImage { mime: string; data: string } // base64
+
+async function callGemini(text: string, refs: RefImage[] = []): Promise<string> {
   const key = process.env.GEMINI_API_KEY!;
   const url = `${GEMINI_BASE}/models/${GEMINI_MODEL}:generateContent?key=${key}`;
+  const parts = [...refs.map((r) => ({ inlineData: { mimeType: r.mime, data: r.data } })), { text }];
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text }] }],
+      contents: [{ parts }],
       generationConfig: { responseModalities: ['IMAGE'] },
     }),
   });
@@ -88,11 +91,13 @@ export async function generateElement(prompt: string, provider: ImageProvider): 
 
 // Full slide: the whole composed creative as one image (full-image mode).
 // Portrait size for OpenAI; Nano Banana follows the aspect described in the prompt.
-export async function generateSlideImage(prompt: string, provider: ImageProvider): Promise<string> {
-  const ck = `slide:${provider}:${prompt}`;
+export async function generateSlideImage(prompt: string, provider: ImageProvider, refs: RefImage[] = []): Promise<string> {
+  // Nano Banana conditions on reference images (logo + house-style slide);
+  // OpenAI generations is text-only here.
+  const ck = `slide:${provider}:${refs.length}:${prompt}`;
   const cached = cache.get(ck);
   if (cached) return cached;
-  const dataUri = provider === 'openai' ? await callOpenAI(prompt, '1024x1536') : await callGemini(prompt);
+  const dataUri = provider === 'openai' ? await callOpenAI(prompt, '1024x1536') : await callGemini(prompt, refs);
   cache.set(ck, dataUri);
   return dataUri;
 }

@@ -1,5 +1,36 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import type { CarouselPlan, Slide, Span } from '@/lib/types';
-import { generateSlideImage, providerAvailable, providerEnvVar, type ImageProvider } from './element-gen';
+import { generateSlideImage, providerAvailable, providerEnvVar, type ImageProvider, type RefImage } from './element-gen';
+
+// Reference images (the real logo + a real slide per layout) condition Nano
+// Banana so output matches the house style and uses the exact logo.
+const refCache = new Map<string, RefImage | null>();
+async function loadRef(rel: string): Promise<RefImage | null> {
+  if (refCache.has(rel)) return refCache.get(rel)!;
+  let v: RefImage | null = null;
+  try {
+    const buf = await fs.readFile(path.join(process.cwd(), 'public', rel));
+    v = { mime: 'image/png', data: buf.toString('base64') };
+  } catch {
+    v = null;
+  }
+  refCache.set(rel, v);
+  return v;
+}
+
+const LAYOUT_REF: Record<string, string> = {
+  cover: 'cover.png',
+  section: 'section.png',
+  'check-do': 'checkdo.png',
+  save: 'save.png',
+};
+
+async function refsForLayout(layout: string): Promise<RefImage[]> {
+  const logo = await loadRef('clients/fifty-plus/logo.png');
+  const style = await loadRef(`clients/fifty-plus/refs/${LAYOUT_REF[layout] || 'section.png'}`);
+  return [logo, style].filter(Boolean) as RefImage[];
+}
 
 // ── Full-slide image generation ───────────────────────────────────────────────
 // Generates the ENTIRE slide as one image (text + layout + imagery) via the
@@ -32,8 +63,16 @@ function imageLine(slide: Slide): string {
   return `Imagery: ${what}, placed ${where}. Text must NOT overlap the image.`;
 }
 
-export function buildSlidePrompt(slide: Slide): string {
-  const parts: string[] = [BRAND_PREAMBLE, ''];
+const REF_NOTE = [
+  'You are given TWO reference images:',
+  '(1) the EXACT FIFTY+ logo — reproduce it pixel-faithfully, do not redraw or alter it;',
+  '(2) a REAL FIFTY+ carousel slide showing the exact house style (cream background, fonts, terracotta accents, flush-left layout, spacing).',
+  'Match that house style precisely, but generate a NEW slide with the content specified below. Do NOT copy the reference slide’s words — only its look.',
+  '',
+].join('\n');
+
+export function buildSlidePrompt(slide: Slide, withRefs = true): string {
+  const parts: string[] = withRefs ? [REF_NOTE, BRAND_PREAMBLE, ''] : [BRAND_PREAMBLE, ''];
   if (slide.layout === 'cover') {
     parts.push('SLIDE TYPE: COVER.');
     parts.push(`Large bold headline, EXACT text: "${txt(slide.headline)}".`);
@@ -91,10 +130,12 @@ export async function generateFullSlides(
   if (!providerAvailable(provider)) {
     throw new Error(`${providerEnvVar(provider)} not set.`);
   }
+  const useRefs = provider === 'nano-banana'; // multimodal refs only on Gemini
   const out: SlideImageResult[] = [];
   for (const slide of plan.slides || []) {
     try {
-      const dataUri = await generateSlideImage(buildSlidePrompt(slide), provider);
+      const refs = useRefs ? await refsForLayout(slide.layout) : [];
+      const dataUri = await generateSlideImage(buildSlidePrompt(slide, useRefs), provider, refs);
       out.push({ index: slide.index, status: 'generated', dataUri });
     } catch (e: any) {
       out.push({ index: slide.index, status: 'error', error: e?.message || 'generation failed' });
