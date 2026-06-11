@@ -46,7 +46,6 @@ export default function Studio({
     [plan],
   );
 
-  const step: number = plan ? 4 : strategy ? 3 : 2;
 
   async function call(path: string, body: unknown) {
     const res = await fetch(path, {
@@ -204,13 +203,6 @@ export default function Studio({
         </div>
       )}
 
-      <div className="steps">
-        <Step n={1} label="Client" active={step === 1} done={!!clientId} />
-        <Step n={2} label="Content + Format" active={step === 2} done={step > 2} />
-        <Step n={3} label="Creative Strategy" active={step === 3} done={step > 3} />
-        <Step n={4} label="Design + Export" active={step === 4} done={false} />
-      </div>
-
       {error && <div className="notice err" style={{ marginBottom: 14 }}>{error}</div>}
 
       {/* Step 1 + 2 */}
@@ -365,14 +357,5 @@ export default function Studio({
         </div>
       )}
     </main>
-  );
-}
-
-function Step({ n, label, active, done }: { n: number; label: string; active: boolean; done: boolean }) {
-  return (
-    <div className={`step${active ? ' active' : ''}${done && !active ? ' done' : ''}`}>
-      <span className="n">{done && !active ? '✓' : n}</span>
-      {label}
-    </div>
   );
 }
