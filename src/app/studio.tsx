@@ -18,6 +18,7 @@ export default function Studio({
   const [clientId, setClientId] = useState(clients[0]?.clientId || '');
   const [content, setContent] = useState('');
   const [format, setFormat] = useState<FormatId>('instagram-carousel');
+  const [faithful, setFaithful] = useState(false);
 
   const [strategy, setStrategy] = useState<StrategyResult | null>(null);
   const [direction, setDirection] = useState<CreativeDirection | null>(null);
@@ -76,6 +77,35 @@ export default function Studio({
     setPlan(null);
     try {
       const json = await call('/api/plan', { clientId, content, direction });
+      setPlan(json.plan);
+      setAssetMap(json.assetMap || {});
+      setElementMap({});
+      setImgNotice(null);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  // Faithful mode: user pasted finished slide copy → skip strategy, lay it out.
+  async function runFaithful() {
+    setError(null);
+    setStrategy(null);
+    setDirection(null);
+    setLoading('plan');
+    setPlan(null);
+    try {
+      const dir: CreativeDirection = {
+        id: 'faithful',
+        title: 'Faithful layout',
+        angle: 'Reproduce the provided slide script exactly in the Fifty+ house style.',
+        emotionalDriver: '—',
+        visualApproach: 'duotone / anatomical / mascot chosen per slide topic',
+        whyItFits: 'User-supplied finished copy — preserve wording, apply design only.',
+        track: 'A-acquisition',
+      };
+      const json = await call('/api/plan', { clientId, content, direction: dir });
       setPlan(json.plan);
       setAssetMap(json.assetMap || {});
       setElementMap({});
@@ -184,17 +214,31 @@ export default function Studio({
           </div>
         </div>
         <div style={{ marginTop: 14 }}>
-          <label>Content / copy (LinkedIn post, carousel script, hook, tweet thread, video title…)</label>
+          <label>Content / copy (raw idea, OR a finished slide-by-slide script)</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="e.g. Why most Indian parents over 50 are quietly losing muscle — and the simple daily fix their doctor would approve of."
+            placeholder={
+              faithful
+                ? 'Paste your finished slide script, e.g.\n\nSLIDE 1 · COVER\nHEADLINE\nWhat happens to sleep after 50...\nSUB-PROMISE\nThe answer is not how long they sleep...\n\nSLIDE 2 · How sleep actually works\n...'
+                : 'e.g. Why most Indian parents over 50 are quietly losing muscle, and the simple daily fix their doctor would approve of.'
+            }
           />
         </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, cursor: 'pointer' }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={faithful} onChange={(e) => setFaithful(e.target.checked)} />
+          I already have the slide-by-slide copy — lay it out faithfully (skip strategy, keep my wording verbatim).
+        </label>
         <div className="btn-row">
-          <button className="btn" disabled={!content.trim() || loading === 'strategy'} onClick={runStrategy}>
-            {loading === 'strategy' ? <><span className="spinner" /> Analyzing…</> : 'Generate creative strategy →'}
-          </button>
+          {faithful ? (
+            <button className="btn" disabled={!content.trim() || loading === 'plan'} onClick={runFaithful}>
+              {loading === 'plan' ? <><span className="spinner" /> Laying out slides…</> : 'Lay out my copy →'}
+            </button>
+          ) : (
+            <button className="btn" disabled={!content.trim() || loading === 'strategy'} onClick={runStrategy}>
+              {loading === 'strategy' ? <><span className="spinner" /> Analyzing…</> : 'Generate creative strategy →'}
+            </button>
+          )}
         </div>
       </div>
 
