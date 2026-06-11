@@ -3,7 +3,7 @@ import { loadClientKnowledge } from '@/lib/clients/registry';
 import { getFormat } from '@/lib/formats/registry';
 import { renderCarouselSlides, type AssetMap } from '@/lib/render/carousel-html';
 import { getBackend } from '@/lib/render/backend';
-import { ensureElements } from '@/lib/render/element-gen';
+import { ensureElements, DEFAULT_PROVIDER, type ImageProvider } from '@/lib/render/element-gen';
 import type { CarouselPlan, FormatId } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -12,11 +12,12 @@ export const maxDuration = 180;
 
 export async function POST(req: Request) {
   try {
-    const { clientId, format, plan, elements: provided } = (await req.json()) as {
+    const { clientId, format, plan, elements: provided, provider = DEFAULT_PROVIDER } = (await req.json()) as {
       clientId: string;
       format: FormatId;
       plan: CarouselPlan;
       elements?: Record<number, string>;
+      provider?: ImageProvider;
     };
     if (!clientId || !plan?.slides?.length) {
       return NextResponse.json({ error: 'clientId and a plan with slides are required.' }, { status: 400 });
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     // Composite Nano Banana elements: reuse any the preview already generated,
     // generate the rest (if GEMINI_API_KEY present). Missing ones fall back to
     // the branded placeholder, so export never blocks on image gen.
-    const { map: elements } = await ensureElements(plan, provided || {});
+    const { map: elements } = await ensureElements(plan, provided || {}, provider);
     const slides = renderCarouselSlides(plan, assetMap, elements);
 
     const backend = getBackend(fmt.defaultBackend);

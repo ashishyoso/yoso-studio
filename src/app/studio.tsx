@@ -5,15 +5,18 @@ import type { ClientSummary, CreativeDirection, StrategyResult, CarouselPlan, Fo
 import { renderCarouselSlides, type AssetMap } from '@/lib/render/carousel-html';
 
 interface FormatLite { id: FormatId; label: string; aspect: string; enabled: boolean }
+type ImageProvider = 'nano-banana' | 'openai';
 
 export default function Studio({
   clients,
   formats,
   mock,
+  providers,
 }: {
   clients: ClientSummary[];
   formats: FormatLite[];
   mock: boolean;
+  providers: Record<ImageProvider, boolean>;
 }) {
   const [clientId, setClientId] = useState(clients[0]?.clientId || '');
   const [content, setContent] = useState('');
@@ -25,6 +28,7 @@ export default function Studio({
   const [plan, setPlan] = useState<CarouselPlan | null>(null);
   const [assetMap, setAssetMap] = useState<AssetMap>({});
   const [elementMap, setElementMap] = useState<Record<number, string>>({});
+  const [provider, setProvider] = useState<ImageProvider>(providers['nano-banana'] ? 'nano-banana' : providers.openai ? 'openai' : 'nano-banana');
 
   const [loading, setLoading] = useState<null | 'strategy' | 'plan' | 'elements' | 'render' | 'upload'>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +149,7 @@ export default function Studio({
     setImgNotice(null);
     setLoading('elements');
     try {
-      const json = await call('/api/elements', { plan });
+      const json = await call('/api/elements', { plan, provider });
       setElementMap(json.elements || {});
       const r = (json.results || []) as { status: string }[];
       const gen = r.filter((x) => x.status === 'generated').length;
@@ -165,7 +169,7 @@ export default function Studio({
     setExportNotice(null);
     setLoading('render');
     try {
-      const json = await call('/api/render', { clientId, format, plan, elements: elementMap });
+      const json = await call('/api/render', { clientId, format, plan, elements: elementMap, provider });
       for (const a of json.assets as { index: number; pngBase64: string }[]) {
         const link = document.createElement('a');
         link.href = `data:image/png;base64,${a.pngBase64}`;
@@ -317,11 +321,26 @@ export default function Studio({
           <p className="hint">{plan.brandConsistencyNotes}</p>
           <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
             {genSlideCount > 0 && (
-              <button className="btn secondary" disabled={loading === 'elements'} onClick={runElements}>
-                {loading === 'elements'
-                  ? <><span className="spinner" /> Generating images…</>
-                  : `🍌 Generate ${genSlideCount} image${genSlideCount > 1 ? 's' : ''} (Nano Banana)`}
-              </button>
+              <>
+                <select
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value as ImageProvider)}
+                  style={{ width: 'auto' }}
+                  title="Image generation model"
+                >
+                  <option value="nano-banana" disabled={!providers['nano-banana']}>
+                    🍌 Nano Banana (Gemini){providers['nano-banana'] ? '' : ' — no key'}
+                  </option>
+                  <option value="openai" disabled={!providers.openai}>
+                    OpenAI (gpt-image-1){providers.openai ? '' : ' — no key'}
+                  </option>
+                </select>
+                <button className="btn secondary" disabled={loading === 'elements'} onClick={runElements}>
+                  {loading === 'elements'
+                    ? <><span className="spinner" /> Generating images…</>
+                    : `Generate ${genSlideCount} image${genSlideCount > 1 ? 's' : ''} →`}
+                </button>
+              </>
             )}
             {imgNotice && <span className="sub">{imgNotice}</span>}
           </div>
