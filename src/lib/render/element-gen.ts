@@ -24,9 +24,9 @@ const OPENAI_BASE = process.env.OPENAI_API_BASE || 'https://api.openai.com/v1';
 // illustrations sit on the cream slide background so they blend seamlessly.
 function elementSuffix(mode: string): string {
   if (mode === 'duotone') {
-    return ' — Render as a full-bleed photograph that FILLS THE ENTIRE FRAME edge to edge: no border, no padding, no surrounding background, NO checkerboard. Absolutely no text, words, numbers, logos, or watermarks.';
+    return ' — Render as a full-bleed photograph where the SUBJECT IS LARGE and FILLS THE ENTIRE FRAME edge to edge: no border, no padding, no surrounding background, NO checkerboard. Absolutely no text, words, numbers, logos, or watermarks.';
   }
-  return ' — A single isolated subject CENTERED on a SOLID warm cream #F1E8DE background (NOT transparent, NO checkerboard pattern). Premium, matte, editorial, flat. Absolutely no text, words, numbers, logos, or watermarks.';
+  return ' — A single LARGE subject that FILLS most of the frame, centered, on a SOLID warm cream #F1E8DE background (NOT transparent, NO checkerboard). Friendly flat vector, premium, matte. The subject must be big and prominent, not small or floating. Absolutely no text, words, numbers, logos, or watermarks.';
 }
 
 export function providerAvailable(provider: ImageProvider): boolean {
