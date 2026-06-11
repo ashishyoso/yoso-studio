@@ -75,8 +75,10 @@ function heroImage(slide: Slide, assets: AssetMap, element?: string): string {
   if (!img || img.mode === 'none' || img.placement === 'none') return '';
 
   const place: Record<string, string> = {
+    // width is explicit so the <img> bleeds to fill the band (replaced elements
+    // don't stretch via left/right:0 — they keep intrinsic width).
     'bottom-right': 'right:0;bottom:0;width:58%;height:46%;border-top-left-radius:36px;',
-    bottom: 'left:0;right:0;bottom:0;height:38%;border-top-left-radius:36px;border-top-right-radius:36px;',
+    bottom: 'left:0;width:100%;bottom:0;height:22%;border-top-left-radius:36px;border-top-right-radius:36px;',
     right: 'right:0;top:24%;width:46%;height:52%;border-top-left-radius:36px;border-bottom-left-radius:36px;',
   };
   const box = place[img.placement] || place['bottom-right'];
@@ -128,14 +130,19 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string, logoSrc?: s
       // on the right; leave headroom above a bottom-bleeding image.
       const place = slide.image?.placement;
       const hasImg = !!slide.image && slide.image.mode !== 'none' && place !== 'none';
+      const bottomImg = hasImg && place === 'bottom';
       const colStyle =
-        hasImg && place === 'right' ? 'width:52%' : hasImg && place === 'bottom' ? 'width:100%;padding-bottom:42%' : '';
+        hasImg && place === 'right' ? 'width:52%' : bottomImg ? 'width:100%;padding-bottom:24%' : '';
+      // Auto-fit body text above a bottom photo: denser copy → smaller type
+      // (mirrors how the reference decks keep type tight on busy slides).
+      const bodyChars = (slide.body || []).reduce((n, l) => n + (l.spans || []).reduce((m, s) => m + s.text.length, 0), 0);
+      const bodyFont = bottomImg ? (bodyChars < 210 ? 35 : bodyChars < 330 ? 31 : bodyChars < 460 ? 28 : 26) : 35;
       return `
         ${logoPill(logoSrc)}
         <div class="col" style="${colStyle}">
           ${slide.sectionHeader ? `<h2 class="h-section">${esc(slide.sectionHeader)}</h2>` : ''}
           ${slide.thesis ? `<p class="thesis">${esc(slide.thesis)}</p>` : ''}
-          ${body ? `<p class="body">${body}</p>` : ''}
+          ${body ? `<p class="body" style="font-size:${bodyFont}px">${body}</p>` : ''}
         </div>
         ${heroImage(slide, assets, element)}
         ${slide.navPill ? navPill(hasImg) : ''}`;
@@ -198,13 +205,13 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
   .logo-img{height:56px;width:auto;display:block}
   .col{position:relative;z-index:2}
   .h-cover{font-family:var(--font-display);line-height:1.02;font-weight:400;margin:26px 0}
-  .h-section{font-family:var(--font-serif);font-size:80px;line-height:1.05;color:var(--terracotta);font-weight:500}
+  .h-section{font-family:var(--font-serif);font-size:80px;line-height:1.05;color:var(--terracotta);font-weight:500;margin-top:40px}
   .subhead{font-family:var(--font-body);font-weight:300;font-size:37px;line-height:1.3;margin-top:8px}
   .body{font-family:var(--font-body);font-weight:300;font-size:35px;line-height:1.35;margin-top:30px}
   .t{color:var(--terracotta)}
   .r{color:var(--alarm)}
   .thesis{display:inline-block;background:var(--terracotta);color:#fff;font-style:italic;
-    font-family:var(--font-body);font-weight:300;font-size:33px;line-height:1.2;padding:10px 18px;margin-top:24px}
+    font-family:var(--font-body);font-weight:300;font-size:33px;line-height:1.2;padding:12px 20px;margin-top:28px}
   .card{background:var(--card);border-radius:24px;box-shadow:var(--shadow);padding:34px 38px;position:relative;z-index:2}
   .card h3{font-family:var(--font-serif);color:var(--terracotta);font-size:50px;margin-bottom:18px;font-weight:500}
   .list{list-style:none;font-size:31px;line-height:1.3}
