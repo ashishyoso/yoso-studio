@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+import { loadClientKnowledge } from '@/lib/clients/registry';
+import { getFormat } from '@/lib/formats/registry';
+import { renderCarouselSlides, type AssetMap } from '@/lib/render/carousel-html';
+import { getBackend } from '@/lib/render/backend';
+import { ensureElements } from '@/lib/render/element-gen';
+import type { CarouselPlan, FormatId } from '@/lib/types';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 180;
+
+export async function POST(req: Request) {
+  try {
+    const { clientId, format, plan, elements: provided } = (await req.json()) as {
+      clientId: string;
+      format: FormatId;
+      plan: CarouselPlan;
+      elements?: Record<number, string>;
+    };
+    if (!clientId || !plan?.slides?.length) {
+      return NextResponse.json({ error: 'clientId and a plan with slides are required.' }, { status: 400 });
+    }
+
+    const knowledge = await loadClientKnowledge(clientId);
+    const fmt = getFormat(format);
+
+    // Rebuild HTML server-side from the plan (authoritative — never trust client HTML).
+    const assetMap: AssetMap = {};
+    for (const a of knowledge.assets) assetMap[a.id] = { label: a.label, path: a.path };
+
+    // Composite Nano Banana elements: reuse any the preview already generated,
+    // generate the rest (if GEMINI_API_KEY present). Missing ones fall back to
+    // the branded placeholder, so export never blocks on image gen.
+    const { map: elements } = await ensureElements(plan, provided || {});
+    const slides = renderCarouselSlides(plan, assetMap, elements);
+
+    const backend = getBackend(fmt.defaultBackend);
+    if (!(await backend.available())) {
+      return NextResponse.json(
+        {
+          error:
+            'PNG export backend unavailable (Puppeteer/Chromium not installed). The live preview still works — install puppeteer to enable export.',
+          backend: backend.id,
+          available: false,
+        },
+        { status: 503 },
+      );
+    }
+
+    const rendered = await backend.render({
+      htmls: slides.map((s) => s.html),
+      width: fmt.width,
+      height: fmt.height,
+    });
+
+    return NextResponse.json({ assets: rendered, backend: backend.id, available: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Render failed.' }, { status: 500 });
+  }
+}
