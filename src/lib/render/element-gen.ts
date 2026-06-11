@@ -19,9 +19,15 @@ const GEMINI_BASE = process.env.GEMINI_API_BASE || 'https://generativelanguage.g
 const OPENAI_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
 const OPENAI_BASE = process.env.OPENAI_API_BASE || 'https://api.openai.com/v1';
 
-// Keep elements on-brand and compositable regardless of the per-slide prompt.
-const STYLE_SUFFIX =
-  ' Single isolated subject on a clean solid or transparent background, suitable for compositing into a layout. Absolutely no text, words, letters, numbers, logos, or watermarks. Premium, matte, editorial. Not a full poster — just the element.';
+// Per-mode compositing instructions. NEVER say "transparent" — image models
+// draw a literal checkerboard for it. Photos fill edge-to-edge; mascots/
+// illustrations sit on the cream slide background so they blend seamlessly.
+function elementSuffix(mode: string): string {
+  if (mode === 'duotone') {
+    return ' — Render as a full-bleed photograph that FILLS THE ENTIRE FRAME edge to edge: no border, no padding, no surrounding background, NO checkerboard. Absolutely no text, words, numbers, logos, or watermarks.';
+  }
+  return ' — A single isolated subject CENTERED on a SOLID warm cream #F1E8DE background (NOT transparent, NO checkerboard pattern). Premium, matte, editorial, flat. Absolutely no text, words, numbers, logos, or watermarks.';
+}
 
 export function providerAvailable(provider: ImageProvider): boolean {
   return provider === 'openai' ? Boolean(process.env.OPENAI_API_KEY) : Boolean(process.env.GEMINI_API_KEY);
@@ -80,11 +86,11 @@ async function callOpenAI(text: string, size = '1024x1024'): Promise<string> {
 
 // Element: an isolated subject to composite into a template (hybrid mode).
 export async function generateElement(prompt: string, provider: ImageProvider): Promise<string> {
+  // `prompt` already includes the mode-specific compositing suffix.
   const ck = `el:${provider}:${prompt}`;
   const cached = cache.get(ck);
   if (cached) return cached;
-  const text = prompt + STYLE_SUFFIX;
-  const dataUri = provider === 'openai' ? await callOpenAI(text) : await callGemini(text);
+  const dataUri = provider === 'openai' ? await callOpenAI(prompt) : await callGemini(prompt);
   cache.set(ck, dataUri);
   return dataUri;
 }
@@ -128,7 +134,7 @@ export async function ensureElements(
       continue;
     }
     try {
-      const dataUri = await generateElement(img.genPrompt, provider);
+      const dataUri = await generateElement(img.genPrompt + elementSuffix(img.mode), provider);
       map[slide.index] = dataUri;
       results.push({ index: slide.index, status: 'generated', dataUri });
     } catch (e: any) {
