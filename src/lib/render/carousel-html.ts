@@ -12,7 +12,7 @@ import type { CarouselPlan, Slide, Span } from '@/lib/types';
 //  - cover/save headline sizes auto-shrink with copy length (base ~104px, floor
 //    64px) to stay inside the 1350px canvas; spec nominal is 110–117px.
 
-export interface AssetMeta { label?: string; path?: string }
+export interface AssetMeta { label?: string; src?: string } // src = inlined data URI
 export type AssetMap = Record<string, AssetMeta>;
 
 const TOKENS = {
@@ -60,8 +60,9 @@ function headlineSize(spans: Span[], base: number, floor: number): number {
   return Math.max(floor, Math.round(size));
 }
 
-function logoPill(): string {
-  // Thin medical-cross glyph (not a literal "+"), centered with the wordmark.
+function logoPill(logoSrc?: string): string {
+  // Prefer the real brand logo (inlined data URI). Fall back to a CSS pill.
+  if (logoSrc) return `<img class="logo-img" src="${logoSrc}" alt="FIFTY+">`;
   return `<div class="logo">FIFTY<svg class="plus" viewBox="0 0 24 24" aria-hidden="true"><rect x="10.4" y="2.5" width="3.2" height="19" rx="1.6"/><rect x="2.5" y="10.4" width="19" height="3.2" rx="1.6"/></svg></div>`;
 }
 
@@ -85,10 +86,10 @@ function heroImage(slide: Slide, assets: AssetMap, element?: string): string {
     return `<img class="hero" src="${element}" style="${box}object-fit:cover" alt="">`;
   }
 
-  // 2) Real asset file present → use it.
+  // 2) Real asset (inlined) present → use it.
   const asset = img.assetId ? assets[img.assetId] : undefined;
-  if (img.source === 'asset' && asset?.path) {
-    return `<img class="hero" src="${esc(asset.path)}" style="${box}object-fit:cover" alt="">`;
+  if (img.source === 'asset' && asset?.src) {
+    return `<img class="hero" src="${asset.src}" style="${box}object-fit:cover" alt="">`;
   }
 
   // Otherwise a branded placeholder showing exactly what should fill this slot.
@@ -103,13 +104,13 @@ function heroImage(slide: Slide, assets: AssetMap, element?: string): string {
     </div>`;
 }
 
-function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
+function slideBody(slide: Slide, assets: AssetMap, element?: string, logoSrc?: string): string {
   switch (slide.layout) {
     case 'cover': {
       const spans = slide.headline || [];
       const size = headlineSize(spans, 112, 72);
       return `
-        ${logoPill()}
+        ${logoPill(logoSrc)}
         <h1 class="h-cover" style="font-size:${size}px">${renderSpans(spans)}</h1>
         ${slide.subhead ? `<p class="subhead">${nl2br(slide.subhead)}</p>` : ''}
         ${heroImage(slide, assets, element)}
@@ -130,7 +131,7 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
       const colStyle =
         hasImg && place === 'right' ? 'width:52%' : hasImg && place === 'bottom' ? 'width:100%;padding-bottom:42%' : '';
       return `
-        ${logoPill()}
+        ${logoPill(logoSrc)}
         <div class="col" style="${colStyle}">
           ${slide.sectionHeader ? `<h2 class="h-section">${esc(slide.sectionHeader)}</h2>` : ''}
           ${slide.thesis ? `<p class="thesis">${esc(slide.thesis)}</p>` : ''}
@@ -143,7 +144,7 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
       const list = (items: string[] | null) =>
         (items || []).map((i) => `<li>${esc(i)}</li>`).join('');
       return `
-        ${logoPill()}
+        ${logoPill(logoSrc)}
         ${slide.sectionHeader ? `<h2 class="h-section">${esc(slide.sectionHeader)}</h2>` : ''}
         <div class="card" style="width:78%;margin-top:30px">
           <h3>${esc(slide.checkTitle || "Here's what to check:")}</h3>
@@ -160,7 +161,7 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
       const size = headlineSize(spans, 96, 62);
       const kw = slide.commentKeyword ? esc(slide.commentKeyword) : 'SAVE';
       return `
-        ${logoPill()}
+        ${logoPill(logoSrc)}
         <h1 class="h-cover" style="font-size:${size}px">${renderSpans(spans)}</h1>
         <p class="body" style="margin-top:28px">Comment <span class="t" style="font-weight:600">${kw}</span> below.</p>
         ${slide.offer ? `<p class="body">${esc(slide.offer)}</p>` : ''}
@@ -168,11 +169,11 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string): string {
         ${heroImage(slide, assets, element)}`;
     }
     default:
-      return logoPill();
+      return logoPill(logoSrc);
   }
 }
 
-export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: string): string {
+export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: string, logoSrc?: string): string {
   return `<!doctype html><html><head><meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="${FONT_LINK}" rel="stylesheet">
@@ -194,6 +195,7 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
     color:#fff;font-family:var(--font-display);font-weight:800;font-size:30px;
     padding:11px 24px;border-radius:999px;letter-spacing:.5px}
   .logo .plus{width:26px;height:26px;fill:#fff;margin-right:-3px}
+  .logo-img{height:56px;width:auto;display:block}
   .col{position:relative;z-index:2}
   .h-cover{font-family:var(--font-display);line-height:1.02;font-weight:400;margin:26px 0}
   .h-section{font-family:var(--font-serif);font-size:80px;line-height:1.05;color:var(--terracotta);font-weight:500}
@@ -220,7 +222,7 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
     text-transform:uppercase;opacity:.9}
   .ph-detail{font-family:var(--font-body);font-weight:300;font-size:24px;line-height:1.25;margin-top:8px}
 </style></head>
-<body><div class="slide">${slideBody(slide, assets, element)}</div>
+<body><div class="slide">${slideBody(slide, assets, element, logoSrc)}</div>
 <script>(function(){function fit(){var k=(window.innerWidth||1080)/1080;var s=document.querySelector('.slide');if(!s)return;s.style.transformOrigin='top left';s.style.transform=k===1?'none':'scale('+k+')';document.body.style.height=(1350*k)+'px';}window.addEventListener('resize',fit);fit();})();</script>
 </body></html>`;
 }
@@ -231,9 +233,10 @@ export function renderCarouselSlides(
   /** slide index → generated element data URI (Nano Banana). */
   elements: Record<number, string> = {},
 ): { index: number; layout: string; html: string }[] {
+  const logoSrc = assets['logo-pill']?.src; // real brand logo, inlined
   return (plan.slides || []).map((s) => ({
     index: s.index,
     layout: s.layout,
-    html: slideToHtml(s, assets, elements[s.index]),
+    html: slideToHtml(s, assets, elements[s.index], logoSrc),
   }));
 }

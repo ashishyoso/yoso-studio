@@ -96,6 +96,38 @@ export async function loadClientKnowledge(clientId: string): Promise<ClientKnowl
 }
 
 /**
+ * Build a render-ready asset map (id → { label, src }) with each asset's file
+ * inlined as a data URI, so images load inside both the preview iframes and the
+ * Puppeteer export (relative/absolute URLs don't resolve in either context).
+ */
+const assetSrcCache = new Map<string, string>();
+export async function buildAssetMap(
+  knowledge: ClientKnowledge,
+): Promise<Record<string, { label?: string; src?: string }>> {
+  const map: Record<string, { label?: string; src?: string }> = {};
+  for (const a of knowledge.assets) {
+    let src: string | undefined;
+    if (a.path) {
+      src = assetSrcCache.get(a.path);
+      if (!src) {
+        try {
+          const file = path.join(process.cwd(), 'public', a.path.replace(/^\//, ''));
+          const buf = await fs.readFile(file);
+          const ext = path.extname(a.path).toLowerCase();
+          const mime = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.svg' ? 'image/svg+xml' : 'application/octet-stream';
+          src = `data:${mime};base64,${buf.toString('base64')}`;
+          assetSrcCache.set(a.path, src);
+        } catch {
+          src = undefined; // file not present → renderer falls back
+        }
+      }
+    }
+    map[a.id] = { label: a.label, src };
+  }
+  return map;
+}
+
+/**
  * MVP "asset intelligence": keyword scoring over the manifest. This is the seam
  * where a vector/embedding search drops in later. Returns assets most relevant
  * to the supplied content + direction so they can be injected into generation

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { loadClientKnowledge } from '@/lib/clients/registry';
+import { loadClientKnowledge, buildAssetMap } from '@/lib/clients/registry';
 import { getFormat } from '@/lib/formats/registry';
 import { renderCarouselSlides, type AssetMap } from '@/lib/render/carousel-html';
 import { getBackend } from '@/lib/render/backend';
@@ -27,8 +27,7 @@ export async function POST(req: Request) {
     const fmt = getFormat(format);
 
     // Rebuild HTML server-side from the plan (authoritative — never trust client HTML).
-    const assetMap: AssetMap = {};
-    for (const a of knowledge.assets) assetMap[a.id] = { label: a.label, path: a.path };
+    const assetMap: AssetMap = await buildAssetMap(knowledge);
 
     // Composite Nano Banana elements: reuse any the preview already generated,
     // generate the rest (if GEMINI_API_KEY present). Missing ones fall back to

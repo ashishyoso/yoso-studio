@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { loadClientKnowledge, findRelevantAssets } from '@/lib/clients/registry';
+import { loadClientKnowledge, findRelevantAssets, buildAssetMap } from '@/lib/clients/registry';
 import { generateCarouselPlan } from '@/lib/ai/slide-planner';
 import { hasApiKey } from '@/lib/ai/anthropic';
 import type { CreativeDirection } from '@/lib/types';
@@ -22,9 +22,8 @@ export async function POST(req: Request) {
     const assets = findRelevantAssets(knowledge, `${content} ${direction.angle} ${direction.visualApproach}`, 6);
     const plan = await generateCarouselPlan(knowledge, content, direction, assets);
 
-    // Build an asset map (id → label/path) for the renderer.
-    const assetMap: AssetMap = {};
-    for (const a of knowledge.assets) assetMap[a.id] = { label: a.label, path: a.path };
+    // Inline assets (logo etc.) as data URIs so they render in preview + export.
+    const assetMap: AssetMap = await buildAssetMap(knowledge);
 
     return NextResponse.json({ plan, assetMap, mock: !hasApiKey() });
   } catch (err: any) {
