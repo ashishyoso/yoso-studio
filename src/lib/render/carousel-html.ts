@@ -187,7 +187,7 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
     --font-hand:"Playwrite US Modern",cursive;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0;overflow:hidden}
   .slide{width:1080px;height:1350px;background:var(--bg);position:relative;
     padding:var(--margin);overflow:hidden;font-family:var(--font-body);color:var(--ink)}
   .logo{display:inline-flex;align-items:center;gap:1px;background:var(--terracotta);
@@ -220,7 +220,9 @@ export function slideToHtml(slide: Slide, assets: AssetMap = {}, element?: strin
     text-transform:uppercase;opacity:.9}
   .ph-detail{font-family:var(--font-body);font-weight:300;font-size:24px;line-height:1.25;margin-top:8px}
 </style></head>
-<body><div class="slide">${slideBody(slide, assets, element)}</div></body></html>`;
+<body><div class="slide">${slideBody(slide, assets, element)}</div>
+<script>(function(){function fit(){var k=(window.innerWidth||1080)/1080;var s=document.querySelector('.slide');if(!s)return;s.style.transformOrigin='top left';s.style.transform=k===1?'none':'scale('+k+')';document.body.style.height=(1350*k)+'px';}window.addEventListener('resize',fit);fit();})();</script>
+</body></html>`;
 }
 
 export function renderCarouselSlides(
