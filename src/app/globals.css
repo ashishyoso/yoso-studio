@@ -107,7 +107,7 @@ textarea { min-height: 150px; }
 .slides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .slide-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #000; }
 .slide-wrap .cap { font-size: 12px; color: var(--muted); padding: 8px 10px; background: var(--panel-2); display: flex; justify-content: space-between; }
-.slide-frame { width: 100%; aspect-ratio: 1080 / 1350; border: 0; display: block; background: #F1E8DE; }
+.slide-frame { width: 100%; aspect-ratio: 1080 / 1350; border: 0; display: block; background: #F1E8DE; object-fit: cover; }
 
 .notice { font-size: 13px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--muted); }
 .notice.warn { border-color: #5a4a1e; color: #e0c886; }

@@ -29,8 +29,11 @@ export default function Studio({
   const [assetMap, setAssetMap] = useState<AssetMap>({});
   const [elementMap, setElementMap] = useState<Record<number, string>>({});
   const [provider, setProvider] = useState<ImageProvider>(providers['nano-banana'] ? 'nano-banana' : providers.openai ? 'openai' : 'nano-banana');
+  const [renderMode, setRenderMode] = useState<'template' | 'full-image'>('template');
+  const [fullSlides, setFullSlides] = useState<{ index: number; pngBase64: string }[] | null>(null);
+  const [fullNote, setFullNote] = useState<string | null>(null);
 
-  const [loading, setLoading] = useState<null | 'strategy' | 'plan' | 'elements' | 'render' | 'upload'>(null);
+  const [loading, setLoading] = useState<null | 'strategy' | 'plan' | 'elements' | 'render' | 'upload' | 'full'>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadNote, setUploadNote] = useState<string | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
@@ -85,6 +88,8 @@ export default function Studio({
       setAssetMap(json.assetMap || {});
       setElementMap({});
       setImgNotice(null);
+      setFullSlides(null);
+      setFullNote(null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -135,6 +140,8 @@ export default function Studio({
       setAssetMap(json.assetMap || {});
       setElementMap({});
       setImgNotice(null);
+      setFullSlides(null);
+      setFullNote(null);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -159,6 +166,34 @@ export default function Studio({
       setImgNotice(e.message);
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function runFullRender() {
+    if (!plan) return;
+    setError(null);
+    setFullNote(null);
+    setLoading('full');
+    try {
+      const json = await call('/api/full-render', { plan, provider });
+      setFullSlides(json.assets || []);
+      const errs = (json.results || []).filter((r: any) => r.status === 'error').length;
+      setFullNote(`Generated ${json.assets.length} full slide(s) with ${provider === 'openai' ? 'OpenAI' : 'Nano Banana'}${errs ? `, ${errs} failed` : ''}.`);
+    } catch (e: any) {
+      setFullNote(e.message);
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  function downloadPngs(assets: { index: number; pngBase64: string }[], tag: string) {
+    for (const a of assets) {
+      const link = document.createElement('a');
+      link.href = `data:image/png;base64,${a.pngBase64}`;
+      link.download = `${clientId}-${tag}-slide-${String(a.index).padStart(2, '0')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     }
   }
 
@@ -311,44 +346,74 @@ export default function Studio({
         <div className="panel">
           <h2>3 · Design &amp; export — {plan.direction}</h2>
           <p className="hint">{plan.brandConsistencyNotes}</p>
-          <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
-            {genSlideCount > 0 && (
-              <>
-                <select
-                  value={provider}
-                  onChange={(e) => setProvider(e.target.value as ImageProvider)}
-                  style={{ width: 'auto' }}
-                  title="Image generation model"
-                >
-                  <option value="nano-banana" disabled={!providers['nano-banana']}>
-                    🍌 Nano Banana (Gemini){providers['nano-banana'] ? '' : ' — no key'}
-                  </option>
-                  <option value="openai" disabled={!providers.openai}>
-                    OpenAI (gpt-image-1){providers.openai ? '' : ' — no key'}
-                  </option>
-                </select>
-                <button className="btn secondary" disabled={loading === 'elements'} onClick={runElements}>
-                  {loading === 'elements'
-                    ? <><span className="spinner" /> Generating images…</>
-                    : `Generate ${genSlideCount} image${genSlideCount > 1 ? 's' : ''} →`}
-                </button>
-              </>
+
+          {/* Render mode */}
+          <div className="btn-row" style={{ marginTop: 0, marginBottom: 12 }}>
+            <label style={{ margin: 0 }}>Render mode</label>
+            <select value={renderMode} onChange={(e) => setRenderMode(e.target.value as any)} style={{ width: 'auto' }}>
+              <option value="template">Template — brand-exact (deterministic)</option>
+              <option value="full-image">Full AI image — whole slide by the model</option>
+            </select>
+            {(renderMode === 'full-image' || genSlideCount > 0) && (
+              <select value={provider} onChange={(e) => setProvider(e.target.value as ImageProvider)} style={{ width: 'auto' }} title="Image model">
+                <option value="nano-banana" disabled={!providers['nano-banana']}>🍌 Nano Banana (Gemini){providers['nano-banana'] ? '' : ' — no key'}</option>
+                <option value="openai" disabled={!providers.openai}>OpenAI (gpt-image-1){providers.openai ? '' : ' — no key'}</option>
+              </select>
             )}
-            {imgNotice && <span className="sub">{imgNotice}</span>}
           </div>
-          <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
-            <button className="btn" disabled={loading === 'render'} onClick={runExport}>
-              {loading === 'render' ? <><span className="spinner" /> Rendering PNGs…</> : 'Export slides as PNG ↓'}
-            </button>
-            {exportNotice && <span className="sub">{exportNotice}</span>}
-          </div>
-          <div className="slides-grid">
-            {slides.map((s) => (
-              <div className="slide-wrap" key={s.index}>
-                <div className="cap"><span>Slide {s.index}</span><span>{s.layout}</span></div>
-                <iframe className="slide-frame" title={`slide-${s.index}`} srcDoc={s.html} scrolling="no" />
+
+          {renderMode === 'template' ? (
+            <>
+              {genSlideCount > 0 && (
+                <div className="btn-row" style={{ marginTop: 0, marginBottom: 12 }}>
+                  <button className="btn secondary" disabled={loading === 'elements'} onClick={runElements}>
+                    {loading === 'elements' ? <><span className="spinner" /> Generating images…</> : `Generate ${genSlideCount} image${genSlideCount > 1 ? 's' : ''} →`}
+                  </button>
+                  {imgNotice && <span className="sub">{imgNotice}</span>}
+                </div>
+              )}
+              <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
+                <button className="btn" disabled={loading === 'render'} onClick={runExport}>
+                  {loading === 'render' ? <><span className="spinner" /> Rendering PNGs…</> : 'Export slides as PNG ↓'}
+                </button>
+                {exportNotice && <span className="sub">{exportNotice}</span>}
               </div>
-            ))}
+            </>
+          ) : (
+            <>
+              <div className="notice warn" style={{ marginBottom: 12 }}>
+                Full-image mode lets the model draw the entire slide. Expect a more cohesive look but
+                <b> text may be misspelled or off, and exact brand colors / your logo are not guaranteed</b> —
+                dense stat/citation slides struggle most. Generation can take 1–3 min for the full set.
+              </div>
+              <div className="btn-row" style={{ marginTop: 0, marginBottom: 16 }}>
+                <button className="btn" disabled={loading === 'full'} onClick={runFullRender}>
+                  {loading === 'full' ? <><span className="spinner" /> Generating full slides…</> : `Generate full slides (${provider === 'openai' ? 'OpenAI' : 'Nano Banana'}) →`}
+                </button>
+                {fullSlides && fullSlides.length > 0 && (
+                  <button className="btn secondary" onClick={() => downloadPngs(fullSlides, 'fullimage')}>Download all PNGs ↓</button>
+                )}
+                {fullNote && <span className="sub">{fullNote}</span>}
+              </div>
+            </>
+          )}
+
+          <div className="slides-grid">
+            {renderMode === 'full-image' && fullSlides ? (
+              fullSlides.map((a) => (
+                <div className="slide-wrap" key={a.index}>
+                  <div className="cap"><span>Slide {a.index}</span><span>full-image</span></div>
+                  <img className="slide-frame" alt={`slide-${a.index}`} src={`data:image/png;base64,${a.pngBase64}`} />
+                </div>
+              ))
+            ) : (
+              slides.map((s) => (
+                <div className="slide-wrap" key={s.index}>
+                  <div className="cap"><span>Slide {s.index}</span><span>{s.layout}</span></div>
+                  <iframe className="slide-frame" title={`slide-${s.index}`} srcDoc={s.html} scrolling="no" />
+                </div>
+              ))
+            )}
           </div>
           <details className="slidespec">
             <summary>View raw slide plan (JSON)</summary>

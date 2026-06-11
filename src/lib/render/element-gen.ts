@@ -38,14 +38,14 @@ export function providerEnvVar(provider: ImageProvider): string {
 // in-process cache so identical (provider,prompt) pairs aren't paid for twice.
 const cache = new Map<string, string>();
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(text: string): Promise<string> {
   const key = process.env.GEMINI_API_KEY!;
   const url = `${GEMINI_BASE}/models/${GEMINI_MODEL}:generateContent?key=${key}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt + STYLE_SUFFIX }] }],
+      contents: [{ parts: [{ text }] }],
       generationConfig: { responseModalities: ['IMAGE'] },
     }),
   });
@@ -56,12 +56,12 @@ async function callGemini(prompt: string): Promise<string> {
   return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
 }
 
-async function callOpenAI(prompt: string): Promise<string> {
+async function callOpenAI(text: string, size = '1024x1024'): Promise<string> {
   const key = process.env.OPENAI_API_KEY!;
   const res = await fetch(`${OPENAI_BASE}/images/generations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, prompt: prompt + STYLE_SUFFIX, size: '1024x1024', n: 1 }),
+    body: JSON.stringify({ model: OPENAI_MODEL, prompt: text, size, n: 1 }),
   });
   const data: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`OpenAI image error: ${data?.error?.message || `HTTP ${res.status}`}`);
@@ -75,11 +75,24 @@ async function callOpenAI(prompt: string): Promise<string> {
   throw new Error(`OpenAI returned no image (model="${OPENAI_MODEL}").`);
 }
 
+// Element: an isolated subject to composite into a template (hybrid mode).
 export async function generateElement(prompt: string, provider: ImageProvider): Promise<string> {
-  const ck = `${provider}:${prompt}`;
+  const ck = `el:${provider}:${prompt}`;
   const cached = cache.get(ck);
   if (cached) return cached;
-  const dataUri = provider === 'openai' ? await callOpenAI(prompt) : await callGemini(prompt);
+  const text = prompt + STYLE_SUFFIX;
+  const dataUri = provider === 'openai' ? await callOpenAI(text) : await callGemini(text);
+  cache.set(ck, dataUri);
+  return dataUri;
+}
+
+// Full slide: the whole composed creative as one image (full-image mode).
+// Portrait size for OpenAI; Nano Banana follows the aspect described in the prompt.
+export async function generateSlideImage(prompt: string, provider: ImageProvider): Promise<string> {
+  const ck = `slide:${provider}:${prompt}`;
+  const cached = cache.get(ck);
+  if (cached) return cached;
+  const dataUri = provider === 'openai' ? await callOpenAI(prompt, '1024x1536') : await callGemini(prompt);
   cache.set(ck, dataUri);
   return dataUri;
 }
