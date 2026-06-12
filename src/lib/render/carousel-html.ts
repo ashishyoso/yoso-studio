@@ -1,4 +1,19 @@
-import type { CarouselPlan, Slide, Span } from '@/lib/types';
+import type { CarouselPlan, Slide, SlideImage, Span } from '@/lib/types';
+
+// ── Layout system (single source of truth) ────────────────────────────────────
+// The image MODE determines its placement — not ad-hoc per-slide values — so
+// margins/composition are deterministic and can't break:
+//   duotone photo      → full-width bottom bleed     (only photos bleed full-width)
+//   anatomical / 3d    → right-side panel, bleeds off the right edge
+//   mascot             → contained bottom-right (cream bg, blends)
+// Alternating modes across the deck is what gives the layouts variety.
+type Placement = 'bottom' | 'right' | 'bottom-right' | 'none';
+function effectivePlacement(img: SlideImage | null): Placement {
+  if (!img || img.mode === 'none' || img.source === 'none') return 'none';
+  if (img.mode === 'duotone') return 'bottom';
+  if (img.mode === 'mascot') return 'bottom-right';
+  return 'right'; // anatomical, 3d → never a full-width band
+}
 
 // ── Fifty+ brand renderer ─────────────────────────────────────────────────────
 // Pure string building (no DOM) so the SAME output drives both the live preview
@@ -72,16 +87,17 @@ function navPill(right = false): string {
 
 function heroImage(slide: Slide, assets: AssetMap, element?: string): string {
   const img = slide.image;
-  if (!img || img.mode === 'none' || img.placement === 'none') return '';
+  const placement = effectivePlacement(img);
+  if (!img || placement === 'none') return '';
 
-  const place: Record<string, string> = {
-    // width is explicit so the <img> bleeds to fill the band (replaced elements
-    // don't stretch via left/right:0 — they keep intrinsic width).
+  // width is explicit so the <img> bleeds to fill the band (replaced elements
+  // don't stretch via left/right:0 — they keep intrinsic width).
+  const place: Record<Exclude<Placement, 'none'>, string> = {
     'bottom-right': 'right:0;bottom:0;width:58%;height:46%;border-top-left-radius:36px;',
     bottom: 'left:0;width:100%;bottom:0;height:22%;border-top-left-radius:36px;border-top-right-radius:36px;',
-    right: 'right:0;top:24%;width:46%;height:52%;border-top-left-radius:36px;border-bottom-left-radius:36px;',
+    right: 'right:0;top:16%;width:50%;height:68%;border-top-left-radius:36px;border-bottom-left-radius:36px;',
   };
-  const box = place[img.placement] || place['bottom-right'];
+  const box = place[placement];
 
   // 1) Generated element (Nano Banana) for this slide → composite it in.
   if (img.source === 'generate' && element) {
@@ -128,15 +144,16 @@ function slideBody(slide: Slide, assets: AssetMap, element?: string, logoSrc?: s
         .join('<br><br>');
       // Keep text out of the image: narrow the text column when the image sits
       // on the right; leave headroom above a bottom-bleeding image.
-      const place = slide.image?.placement;
-      const hasImg = !!slide.image && slide.image.mode !== 'none' && place !== 'none';
-      const bottomImg = hasImg && place === 'bottom';
+      const place = effectivePlacement(slide.image);
+      const hasImg = place !== 'none';
+      // Reserve space so text never enters the image: bottom band → padding-bottom;
+      // right panel → narrow the text column to the left half.
       const colStyle =
-        hasImg && place === 'right' ? 'width:52%' : bottomImg ? 'width:100%;padding-bottom:24%' : '';
-      // Auto-fit body text above a bottom photo: denser copy → smaller type
+        place === 'right' ? 'width:50%' : place === 'bottom' ? 'width:100%;padding-bottom:24%' : '';
+      // Auto-fit body text when an image is present: denser copy → smaller type
       // (mirrors how the reference decks keep type tight on busy slides).
       const bodyChars = (slide.body || []).reduce((n, l) => n + (l.spans || []).reduce((m, s) => m + s.text.length, 0), 0);
-      const bodyFont = bottomImg ? (bodyChars < 210 ? 35 : bodyChars < 330 ? 31 : bodyChars < 460 ? 28 : 26) : 35;
+      const bodyFont = hasImg ? (bodyChars < 210 ? 35 : bodyChars < 330 ? 31 : bodyChars < 460 ? 28 : 26) : 35;
       return `
         ${logoPill(logoSrc)}
         <div class="col" style="${colStyle}">
