@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   // puppeteer must not be bundled by webpack/server tracing — load it at runtime
   experimental: {
-    serverComponentsExternalPackages: ['puppeteer', 'pdf-parse'],
+    serverComponentsExternalPackages: ['puppeteer', 'puppeteer-core', '@sparticuz/chromium', 'pdf-parse'],
   },
 };
 

@@ -1,34 +1,49 @@
 import type { RenderBackend, RenderInput, RenderedAsset } from './backend';
 
-// Deterministic HTML/CSS → PNG via Puppeteer. This is the brand-faithful
-// backend: pixel-perfect typography, exact hex, real fonts, flush-left grid.
-// Puppeteer is an OPTIONAL dependency — if it (or its Chromium) is unavailable,
-// `available()` returns false and the API responds with a graceful message
-// while the live HTML preview keeps working.
+// Deterministic HTML/CSS → PNG via Puppeteer. Brand-faithful: pixel-perfect
+// typography, exact hex, real fonts, flush-left grid.
+//
+// Two launch paths:
+//   - Serverless (Vercel/Lambda): puppeteer-core + @sparticuz/chromium
+//   - Local dev: the full `puppeteer` package (optional dependency)
+// If neither is available, `available()` returns false → API responds 503 and
+// the live HTML preview keeps working.
 
-let puppeteerMod: any | undefined;
-async function loadPuppeteer(): Promise<any | null> {
-  if (puppeteerMod !== undefined) return puppeteerMod;
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+let launcher: (() => Promise<any>) | null | undefined;
+
+async function resolveLauncher(): Promise<(() => Promise<any>) | null> {
+  if (launcher !== undefined) return launcher;
   try {
-    // Non-literal specifier → resolved at runtime only (optional dependency),
-    // so TS/webpack don't require puppeteer to be installed to build.
-    const spec = 'puppeteer';
-    // @ts-ignore optional dependency, may be absent
-    puppeteerMod = (await import(/* webpackIgnore: true */ spec)).default;
+    if (isServerless) {
+      const chromium = (await import('@sparticuz/chromium')).default;
+      const puppeteer = (await import('puppeteer-core')).default;
+      launcher = async () =>
+        puppeteer.launch({
+          args: chromium.args,
+          executablePath: await chromium.executablePath(),
+          headless: true,
+        });
+    } else {
+      // Non-literal specifier → optional dep, not required to build.
+      const spec = 'puppeteer';
+      // @ts-ignore optional dependency, may be absent locally
+      const puppeteer = (await import(/* webpackIgnore: true */ spec)).default;
+      launcher = async () =>
+        puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    }
   } catch {
-    puppeteerMod = null;
+    launcher = null;
   }
-  return puppeteerMod;
+  return launcher;
 }
 
 async function renderAll(input: RenderInput): Promise<RenderedAsset[]> {
-  const puppeteer = await loadPuppeteer();
-  if (!puppeteer) throw new Error('puppeteer-unavailable');
+  const launch = await resolveLauncher();
+  if (!launch) throw new Error('puppeteer-unavailable');
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const browser = await launch();
   try {
     const out: RenderedAsset[] = [];
     for (let i = 0; i < input.htmls.length; i++) {
@@ -54,7 +69,7 @@ async function renderAll(input: RenderInput): Promise<RenderedAsset[]> {
 export const templateBackend: RenderBackend = {
   id: 'template-html',
   async available() {
-    return (await loadPuppeteer()) !== null;
+    return (await resolveLauncher()) !== null;
   },
   render: renderAll,
 };
