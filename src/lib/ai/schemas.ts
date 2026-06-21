@@ -43,22 +43,20 @@ const SPAN = {
   required: ['text', 'tone'],
 } as const;
 
-const BODY_LINE = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    style: {
-      type: 'string',
-      enum: ['body', 'hand'],
-      description: "'body' = normal body line; 'hand' = an occasional handwritten-accent transitional/closing line (use sparingly, like 'More milk hasn't solved it.').",
-    },
-    spans: {
-      type: 'array',
-      items: SPAN,
-      description: 'Inline runs for this line. Color ONLY the stat/keyword (tone "topic"), leave the rest "ink". Put each idea on its own line.',
-    },
-  },
-  required: ['style', 'spans'],
+const STAT = {
+  type: 'object', additionalProperties: false,
+  properties: { n: { type: 'string', description: 'The big number, e.g. "+5–16%".' }, label: { type: 'string' } },
+  required: ['n', 'label'],
+} as const;
+const ICON_ITEM = {
+  type: 'object', additionalProperties: false,
+  properties: { icon: { type: 'string', enum: ['clock', 'walk', 'brain', 'people', 'grip', 'chair', 'stairs'] }, label: { type: 'string' } },
+  required: ['icon', 'label'],
+} as const;
+const PROTO_ITEM = {
+  type: 'object', additionalProperties: false,
+  properties: { act: { type: 'string', description: 'Bold action.' }, why: { type: 'string', description: 'One plain why-line.' } },
+  required: ['act', 'why'],
 } as const;
 
 const SLIDE_IMAGE = {
@@ -83,24 +81,33 @@ const SLIDE = {
   additionalProperties: false,
   properties: {
     index: { type: 'integer' },
-    layout: { type: 'string', enum: ['cover', 'section', 'check-do', 'save'] },
-    headline: { type: ['array', 'null'], items: SPAN, description: 'Two-tone headline spans (cover + save slides).' },
-    subhead: { type: ['string', 'null'] },
-    sectionHeader: { type: ['string', 'null'], description: 'Serif terracotta header (section + check-do).' },
-    thesis: { type: ['string', 'null'], description: 'One-line thesis for the terracotta highlight bar.' },
-    body: { type: ['array', 'null'], items: BODY_LINE, description: 'Body copy, one idea per line. Stats highlighted. Citations in parens with a real source.' },
-    checkTitle: { type: ['string', 'null'] },
-    checkItems: { type: ['array', 'null'], items: { type: 'string' } },
-    helpsTitle: { type: ['string', 'null'] },
-    helpsItems: { type: ['array', 'null'], items: { type: 'string' } },
-    commentKeyword: { type: ['string', 'null'], description: 'Single uppercase keyword for the comment mechanic (save slide).' },
-    offer: { type: ['string', 'null'], description: 'Free-guide offer line (save slide).' },
+    type: { type: 'string', enum: ['cover', 'stats', 'flow', 'statHero', 'mechanism', 'cycle', 'protocol', 'save'] },
+    counter: { type: 'string', description: '"N/total" pill, e.g. "1/8".' },
+    kicker: { type: ['string', 'null'], description: 'Section header (orange grotesque). Not on cover.' },
+    lead: { type: ['string', 'null'], description: 'Supporting line under the kicker.' },
+    foot: { type: ['string', 'null'], description: 'Citation footnote / closing micro-line.' },
+    headline: { type: ['array', 'null'], items: SPAN, description: 'Two-tone headline (cover + save).' },
+    sub: { type: ['string', 'null'], description: 'Cover subhead.' },
+    stats: { type: ['array', 'null'], items: STAT, description: 'stats archetype (2–3).' },
+    pills: { type: ['array', 'null'], items: ICON_ITEM, description: 'flow archetype (3–4).' },
+    removes: { type: ['array', 'null'], items: SPAN, description: 'flow: "removes them all at once" (two-tone).' },
+    cascade: { type: ['string', 'null'], description: 'flow: "A → B → C".' },
+    head: { type: ['string', 'null'] }, big: { type: ['string', 'null'], description: 'statHero hero number.' }, tail: { type: ['string', 'null'] },
+    bars: { type: ['array', 'null'], items: { type: 'number' }, description: 'statHero descending bar heights 0–100.' },
+    xlabels: { type: ['array', 'null'], items: { type: 'string' } },
+    word: { type: ['string', 'null'], description: 'mechanism: named term.' }, phon: { type: ['string', 'null'] }, def: { type: ['string', 'null'] },
+    signs: { type: ['array', 'null'], items: ICON_ITEM, description: 'mechanism early-signs (2–3).' },
+    nodes: { type: ['array', 'null'], items: { type: 'string' }, description: 'cycle node labels (clockwise).' },
+    close: { type: ['array', 'null'], items: SPAN, description: 'cycle closing two-tone line.' },
+    items: { type: ['array', 'null'], items: PROTO_ITEM, description: 'protocol items.' },
+    cta: { type: ['array', 'null'], items: SPAN, description: 'save: "Comment KEYWORD below…".' },
+    button: { type: ['string', 'null'], description: 'save button text.' },
     image: { ...SLIDE_IMAGE, type: ['object', 'null'] },
-    navPill: { type: 'boolean', description: 'true on slides 1–7, false on the final save slide.' },
   },
   required: [
-    'index', 'layout', 'headline', 'subhead', 'sectionHeader', 'thesis', 'body',
-    'checkTitle', 'checkItems', 'helpsTitle', 'helpsItems', 'commentKeyword', 'offer', 'image', 'navPill',
+    'index', 'type', 'counter', 'kicker', 'lead', 'foot', 'headline', 'sub', 'stats', 'pills', 'removes',
+    'cascade', 'head', 'big', 'tail', 'bars', 'xlabels', 'word', 'phon', 'def', 'signs', 'nodes', 'close',
+    'items', 'cta', 'button', 'image',
   ],
 } as const;
 

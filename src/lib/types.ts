@@ -86,15 +86,15 @@ export interface Span {
   text: string;
   tone: Tone;
 }
-export type BodyStyle = 'body' | 'hand';
-export interface BodyLine {
-  /** 'body' = normal body sans; 'hand' = Playwrite handwritten accent line. */
-  style: BodyStyle;
-  /** Inline two-tone runs so only the stat/keyword is colored, not the line. */
-  spans: Span[];
-}
+// ── Wellbeing-Nutrition archetype model (skinned in the Fifty+ brand) ──────────
+// Each slide is one of 8 archetypes from the replication playbook. Most fields
+// are optional and apply only to certain `type`s — set null elsewhere.
+export type SlideType = 'cover' | 'stats' | 'flow' | 'statHero' | 'mechanism' | 'cycle' | 'protocol' | 'save';
 
-export type SlideLayout = 'cover' | 'section' | 'check-do' | 'save';
+export interface Stat { n: string; label: string }
+/** A line icon + label — used by flow pills and mechanism early-signs. */
+export interface IconItem { icon: string; label: string }
+export interface ProtocolItem { act: string; why: string }
 
 export interface SlideImage {
   mode: 'mascot' | 'duotone' | 'anatomical' | '3d' | 'none';
@@ -108,20 +108,32 @@ export interface SlideImage {
 
 export interface Slide {
   index: number;
-  layout: SlideLayout;
-  headline: Span[] | null; // cover + save
-  subhead: string | null; // cover
-  sectionHeader: string | null; // section + check-do
-  thesis: string | null; // highlight bar
-  body: BodyLine[] | null; // section
-  checkTitle: string | null; // check-do
-  checkItems: string[] | null;
-  helpsTitle: string | null;
-  helpsItems: string[] | null;
-  commentKeyword: string | null; // save
-  offer: string | null; // save
-  image: SlideImage | null;
-  navPill: boolean;
+  type: SlideType;
+  counter: string;                 // baked slide-counter pill, e.g. "1/8"
+  kicker: string | null;           // section header (orange grotesque); cover uses headline instead
+  lead: string | null;             // supporting line under the kicker
+  foot: string | null;             // citation footnote / closing micro-line
+  headline: Span[] | null;         // cover + save (two-tone)
+  sub: string | null;              // cover subhead
+  stats: Stat[] | null;            // stats archetype
+  pills: IconItem[] | null;        // flow: the things work gave the body
+  removes: Span[] | null;          // flow: "removes them all at once"
+  cascade: string | null;          // flow: "Less movement → less muscle → …"
+  head: string | null;             // statHero pre-number text
+  big: string | null;              // statHero hero number
+  tail: string | null;             // statHero post-number text
+  bars: number[] | null;           // statHero descending bar heights (0–100)
+  xlabels: string[] | null;        // statHero x-axis labels
+  word: string | null;             // mechanism: the named term
+  phon: string | null;             // mechanism: phonetic + part of speech
+  def: string | null;              // mechanism: one-line definition
+  signs: IconItem[] | null;        // mechanism: early-sign icons
+  nodes: string[] | null;          // cycle: node labels (clockwise)
+  close: Span[] | null;            // cycle: closing two-tone line
+  items: ProtocolItem[] | null;    // protocol: action + why
+  cta: Span[] | null;              // save: "Comment KEYWORD below…"
+  button: string | null;           // save: button text
+  image: SlideImage | null;        // cover / protocol / save / mechanism photo
 }
 
 export interface CarouselPlan {

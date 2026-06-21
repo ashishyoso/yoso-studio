@@ -1,0 +1,4 @@
+# Keep the deploy lean — these aren't part of the studio app.
+chashma
+.claude
+*.log

@@ -50,15 +50,15 @@ async function callGemini(text: string, refs: RefImage[] = []): Promise<string> 
   const key = process.env.GEMINI_API_KEY!;
   const url = `${GEMINI_BASE}/models/${GEMINI_MODEL}:generateContent?key=${key}`;
   const parts = [...refs.map((r) => ({ inlineData: { mimeType: r.mime, data: r.data } })), { text }];
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: { responseModalities: ['IMAGE'] },
-    }),
-  });
-  const data: any = await res.json().catch(() => ({}));
+  const post = (cfg: Record<string, unknown>) =>
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }], generationConfig: cfg }) });
+  // Lock to 4:5; some image models don't accept imageConfig → retry without it.
+  let res = await post({ responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '4:5' } });
+  let data: any = await res.json().catch(() => ({}));
+  if (!res.ok && /imageConfig|aspectRatio|Unknown|Invalid/i.test(data?.error?.message || '')) {
+    res = await post({ responseModalities: ['IMAGE'] });
+    data = await res.json().catch(() => ({}));
+  }
   if (!res.ok) throw new Error(`Nano Banana error: ${data?.error?.message || `HTTP ${res.status}`}`);
   const part = (data?.candidates?.[0]?.content?.parts || []).find((p: any) => p?.inlineData?.data);
   if (!part) throw new Error(`Nano Banana returned no image (model="${GEMINI_MODEL}").`);

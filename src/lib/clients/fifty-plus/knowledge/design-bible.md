@@ -2,6 +2,8 @@
 
 A regeneration spec for Instagram carousels in the Fifty+ house style. Every token below was extracted from the source PDFs (fonts, hex values, sizes, geometry) and is meant to be used as the single source of truth when you ask me to build a new carousel. If a new instruction conflicts with this file, the new instruction wins, but flag the deviation.
 
+> **BRAND UPDATE — current source of truth.** Extracted from the real Praan *Fifty+ Clinic* deck: accent **`#F36937`** (warm orange), background **`#F2E9E2`** (cream), worst-outcome **`#E0481C`**, ink `#1A1A1A`. Fonts: **Aeonik** for headlines + section headers (a clean geometric grotesque, *not* a serif) with **Switzer** as the free fallback, and **Archivo** for body. The mark is the **"Fifty+ Clinic" wordmark** (dark "Fifty", orange "+" cross + "Clinic"), not a filled pill. These values supersede any older `#D14124` / Mulish / Fraunces / terracotta-pill references below. The live renderers (`src/lib/render/carousel-html.ts`, `full-slide-gen.ts`) already use them.
+
 ---
 
 ## 1. What Fifty+ is, in one line
@@ -32,10 +34,10 @@ All px values in this document assume the **1080 px** export canvas. To convert 
 
 | Role | Hex | Use |
 |---|---|---|
-| Background cream | `#F1E8DE` | Every slide background. Never white. |
+| Background cream | `#F2E9E2` | Every slide background. Never white. |
 | Card ivory | `#F2E9DF` | Fill for the check/do panels. One step lighter than the bg. |
-| Terracotta (primary) | `#D14124` | Logo pill, section headers, highlight bars, save button, topic words in headlines, stat highlights, citations, arrow bullets. This is the brand. |
-| Alarm red | `#D14124` | Reserved for the single most negative phrase in a headline (the loss, the decline, the rupture). Use sparingly, usually once per cover. |
+| Terracotta (primary) | `#F36937` | Logo pill, section headers, highlight bars, save button, topic words in headlines, stat highlights, citations, arrow bullets. This is the brand. |
+| Alarm red | `#F36937` | Reserved for the single most negative phrase in a headline (the loss, the decline, the rupture). Use sparingly, usually once per cover. |
 | Ink | `#1A1A1A` | Default headline and body text. |
 | Pure black | `#1A1A1A` | Occasionally used interchangeably with ink in body runs. Treat `#1A1A1A` as canonical. |
 | White | `#FFFFFF` | Text inside terracotta surfaces (highlight bar, save button), and the nav pill fill. |
@@ -43,8 +45,8 @@ All px values in this document assume the **1080 px** export canvas. To convert 
 
 **Headline colour logic (do this every time):**
 - Default words = ink `#1A1A1A`.
-- The topic noun = terracotta `#D14124` (e.g. "sleep after 50", "knees start hurting", "PROTEIN").
-- The single worst outcome phrase = alarm red `#D14124` (e.g. "less time in deep sleep", "not getting stronger").
+- The topic noun = terracotta `#F36937` (e.g. "sleep after 50", "knees start hurting", "PROTEIN").
+- The single worst outcome phrase = alarm red `#F36937` (e.g. "less time in deep sleep", "not getting stronger").
 - A headline almost never uses all three colours on one line. Two colours per line maximum.
 
 ---
@@ -68,14 +70,14 @@ Four typefaces, each with a fixed job. Do not mix jobs.
 |---|---|---|---|---|
 | Cover hook headline | 110–117 px | Display Sans, regular | two-tone | 1.02 |
 | Save-slide headline | 80–96 px | Display Sans, regular | two-tone | 1.05 |
-| Interior section header | 80–84 px | Display Serif | `#D14124` | 1.05 |
-| Sub-header ("Here's what helps:") | 50–52 px | Display Serif | `#D14124` | 1.1 |
+| Interior section header | 80–84 px | Display Serif | `#F36937` | 1.05 |
+| Sub-header ("Here's what helps:") | 50–52 px | Display Serif | `#F36937` | 1.1 |
 | Cover subhead | 36–38 px | Body Sans Light | `#1A1A1A` | 1.3 |
-| Body copy | 34–36 px | Body Sans Light | `#1A1A1A` (stats `#D14124`) | 1.35 |
+| Body copy | 34–36 px | Body Sans Light | `#1A1A1A` (stats `#F36937`) | 1.35 |
 | Highlight bar | 32–34 px | Body Sans Light Italic | `#FFFFFF` | 1.2 |
 | Check/do list item | 30–31 px | Body Sans Light | `#1A1A1A` | 1.3 |
-| Handwritten accent | 36–38 px | Playwrite US Modern | mix of `#1A1A1A` and `#D14124` | 1.25 |
-| Citation (in parens) | matches body | Body Sans Light | `#D14124` or `#1A1A1A` | inherit |
+| Handwritten accent | 36–38 px | Playwrite US Modern | mix of `#1A1A1A` and `#F36937` | 1.25 |
+| Citation (in parens) | matches body | Body Sans Light | `#F36937` or `#1A1A1A` | inherit |
 
 Headlines are set tight (line height ~1.0) and large enough to fill most of the slide width. Body copy breaks early and often, roughly one clause per line, with blank lines between thoughts.
 
@@ -84,18 +86,18 @@ Headlines are set tight (line height ~1.0) and large enough to fill most of the 
 ## 5. Components
 
 ### 5.1 Logo pill
-- "FIFTY+" wordmark in white Display Sans (bold/heavy weight), inside a terracotta `#D14124` rounded pill (fully rounded ends).
+- "FIFTY+" wordmark in white Display Sans (bold/heavy weight), inside a terracotta `#F36937` rounded pill (fully rounded ends).
 - The "+" is a thin medical-style cross set slightly raised, like a plus/superscript.
 - Position: top-left, 48 px margin. On image-left slides it moves to top-right.
 - Pill height ≈ 48–52 px.
 
 ### 5.2 Highlight bar (the thesis bar)
-- A solid terracotta `#D14124` rectangle hugging the left margin, width = its text plus padding.
+- A solid terracotta `#F36937` rectangle hugging the left margin, width = its text plus padding.
 - Text inside: Body Sans Light **Italic**, white, one line, the single-sentence thesis of the slide (e.g. "Bone is living tissue.", "The immune system has two parts.").
 - Sits directly under the section header. Slight corner radius (~2 px) or square.
 
 ### 5.3 Arrow bullets
-- Glyph "→" in terracotta `#D14124`, hanging to the left of the text with the text block indented so wrapped lines align under the first word, not under the arrow.
+- Glyph "→" in terracotta `#F36937`, hanging to the left of the text with the text block indented so wrapped lines align under the first word, not under the arrow.
 - Used in all checklist content.
 
 ### 5.4 Check / Do cards
@@ -109,7 +111,7 @@ Headlines are set tight (line height ~1.0) and large enough to fill most of the 
 - Size ≈ 110 x 56 px. Position: bottom-left on most slides, bottom-right on image-heavy slides. Present on every slide except the final save slide.
 
 ### 5.6 Save button
-- Terracotta `#D14124` rectangle, small radius (~4 px), white Body Sans **Italic** text "Save This Post".
+- Terracotta `#F36937` rectangle, small radius (~4 px), white Body Sans **Italic** text "Save This Post".
 - Final slide only, lower-left.
 
 ### 5.7 Comment mechanic
@@ -173,18 +175,18 @@ To regenerate, I produce 8 HTML slides at 1080 x 1350 and export each to PNG, th
 
 ```css
 :root{
-  --bg:#F1E8DE;
-  --card:#F1E8DE;
-  --terracotta:#D14124;
-  --alarm:#D14124;
+  --bg:#F2E9E2;
+  --card:#F2E9E2;
+  --terracotta:#F36937;
+  --alarm:#F36937;
   --ink:#1A1A1A;
   --white:#FFFFFF;
   --shadow:0 12px 40px rgba(208,64,36,0.12);
 
-  --font-display:"Mulish","Hanken Grotesk",Verdana,sans-serif;       /* Vera Humana 95 substitute */
-  --font-serif:"Fraunces","Source Serif 4","PT Serif",serif;          /* editorial serif substitute */
-  --font-body:"Inter","Helvetica Neue",Arial,sans-serif;              /* Neue Haas Grotesk substitute */
-  --font-hand:"Playwrite US Modern",cursive;
+  --font-display:"Aeonik","Switzer","Archivo",sans-serif;            /* real brand: Aeonik; free fallback Switzer */
+  --font-serif:"Aeonik","Switzer","Archivo",sans-serif;              /* brand uses grotesque headers, NOT a serif */
+  --font-body:"Archivo","Helvetica Neue",Arial,sans-serif;           /* real brand body */
+  --font-hand:"Archivo",sans-serif;
 
   --margin:48px;
 }
@@ -292,7 +294,7 @@ To regenerate, I produce 8 HTML slides at 1080 x 1350 and export each to PNG, th
 
 Before exporting, confirm:
 
-- [ ] Background is `#F1E8DE`, never white.
+- [ ] Background is `#F2E9E2`, never white.
 - [ ] Logo pill present, correct corner, white wordmark.
 - [ ] Every interior header is the serif in terracotta; every cover/save headline is the display sans, two-tone.
 - [ ] Alarm red used at most once per slide, on the worst-outcome phrase only.

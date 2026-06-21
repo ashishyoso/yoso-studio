@@ -32,18 +32,23 @@ export async function POST(req: Request) {
     const results = await generateFullSlides(plan, provider);
     const generated = results.filter((r) => r.status === 'generated' && r.dataUri);
 
-    let assets: { index: number; pngBase64: string }[] = [];
-    const backend = getBackend('template-html');
-    if (generated.length && (await backend.available())) {
-      const htmls = generated.map(
-        (g) =>
-          `<!doctype html><html><head><style>html,body{margin:0;padding:0}.f{width:1080px;height:1350px;overflow:hidden;background:#F1E8DE;display:flex;align-items:center;justify-content:center}.f img{max-width:100%;max-height:100%;object-fit:contain;display:block}</style></head><body><div class="f"><img src="${g.dataUri}"></div></body></html>`,
-      );
-      const rendered = await backend.render({ htmls, width: 1080, height: 1350 });
-      assets = generated.map((g, i) => ({ index: g.index, pngBase64: rendered[i].pngBase64 }));
-    } else {
-      // No Puppeteer → return the raw model output (may not be exactly 4:5).
-      assets = generated.map((g) => ({ index: g.index, pngBase64: (g.dataUri || '').split(',')[1] || '' }));
+    // The raw model output (already ~4:5) is the reliable baseline. Optionally
+    // normalize each to an exact 1080x1350 PNG via Puppeteer — but on serverless
+    // where headless Chromium may be unavailable, keep the raw image instead of
+    // failing the whole request.
+    let assets = generated.map((g) => ({ index: g.index, pngBase64: (g.dataUri || '').split(',')[1] || '' }));
+    try {
+      const backend = getBackend('template-html');
+      if (generated.length && (await backend.available())) {
+        const htmls = generated.map(
+          (g) =>
+            `<!doctype html><html><head><style>html,body{margin:0;padding:0}.f{width:1080px;height:1350px;overflow:hidden;background:#F2E9E2;display:flex;align-items:center;justify-content:center}.f img{max-width:100%;max-height:100%;object-fit:contain;display:block}</style></head><body><div class="f"><img src="${g.dataUri}"></div></body></html>`,
+        );
+        const rendered = await backend.render({ htmls, width: 1080, height: 1350 });
+        assets = generated.map((g, i) => ({ index: g.index, pngBase64: rendered[i].pngBase64 }));
+      }
+    } catch {
+      // Chromium unavailable at runtime → keep the raw Nano Banana images.
     }
 
     return NextResponse.json({
